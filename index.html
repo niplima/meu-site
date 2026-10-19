@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Buscar CEP — ViaCEP (meu-site)</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;color:#222}
+    input{padding:8px;font-size:1rem;margin-right:8px}
+    button{padding:8px 12px;font-size:1rem;margin-right:8px}
+    #mensagem{margin-top:16px;font-weight:600}
+    #resultado{margin-top:12px;list-style:none;padding:0}
+    #resultado li{margin:6px 0}
+  </style>
+</head>
+<body>
+  <h1>Buscar CEP (ViaCEP)</h1>
+
+  <label for="cep">CEP:</label>
+  <input id="cep" placeholder="00000-000 ou 00000000" aria-label="CEP">
+  <button id="buscar">Buscar</button>
+
+  <!-- Botões de teste para demonstrar pelo menos dois cenários -->
+  <button id="testeValido">Testar válido</button>
+  <button id="testeInvalido">Testar inválido</button>
+
+  <div id="mensagem" role="status" aria-live="polite">&nbsp;</div>
+
+  <ul id="resultado">
+    <li>Rua: <span id="rua">—</span></li>
+    <li>Bairro: <span id="bairro">—</span></li>
+    <li>Cidade: <span id="cidade">—</span></li>
+    <li>UF: <span id="uf">—</span></li>
+  </ul>
+
+  <script>
+    async function buscarCEP(cep) {
+      const msg = document.getElementById('mensagem');
+      const rua = document.getElementById('rua');
+      const bairro = document.getElementById('bairro');
+      const cidade = document.getElementById('cidade');
+      const uf = document.getElementById('uf');
+
+      // Limpa a área de resultado e mostra status
+      msg.textContent = 'Buscando...';
+      rua.textContent = bairro.textContent = cidade.textContent = uf.textContent = '—';
+
+      try {
+        if (!cep) throw new Error('Digite um CEP.');
+        const cepLimpo = cep.replace(/\D/g, '');
+        if (cepLimpo.length !== 8) throw new Error('Formato de CEP inválido. Use 8 dígitos.');
+
+        const resposta = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+        if (!resposta.ok) throw new Error('Erro na requisição (HTTP ' + resposta.status + ')');
+
+        const dados = await resposta.json();
+        if (dados.erro) throw new Error('CEP não encontrado.');
+
+        // Atualiza o DOM com os dados recebidos (sem recarregar a página)
+        rua.textContent = dados.logradouro || '—';
+        bairro.textContent = dados.bairro || '—';
+        cidade.textContent = dados.localidade || '—';
+        uf.textContent = dados.uf || '—';
+        msg.textContent = 'CEP encontrado com sucesso.';
+      } catch (erro) {
+        console.error('Erro ao buscar CEP:', erro);
+        msg.textContent = 'Não foi possível buscar o CEP: ' + erro.message;
+      }
+    }
+
+    document.getElementById('buscar').addEventListener('click', () => {
+      const cep = document.getElementById('cep').value;
+      buscarCEP(cep);
+    });
+
+    document.getElementById('cep').addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') document.getElementById('buscar').click();
+    });
+
+    // Cenários de teste: um CEP válido e um inválido
+    document.getElementById('testeValido').addEventListener('click', () => {
+      // CEP exemplo válido: Praça da Sé, São Paulo
+      document.getElementById('cep').value = '01001-000';
+      buscarCEP('01001-000');
+    });
+
+    document.getElementById('testeInvalido').addEventListener('click', () => {
+      // CEP inválido (provavelmente não existe)
+      document.getElementById('cep').value = '00000-000';
+      buscarCEP('00000-000');
+    });
+  </script>
+</body>
+</html>
